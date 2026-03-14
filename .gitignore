@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# Model files
+*.bin
+*.pt
+*.safetensors
+*.ckpt
+
+# Adapter weights
+medical_llm_adapter/
+
+# Huggingface cache
+.cache/
+
+# Logs
+*.log
