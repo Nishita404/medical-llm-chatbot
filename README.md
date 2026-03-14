@@ -2,6 +2,13 @@
 
 A medical question-answering chatbot built by fine-tuning an open-source LLM on the MedQuAD dataset.
 
+## Highlights
+
+- Fine-tuned an open-source LLM on the MedQuAD medical dataset
+- Implemented QLoRA parameter-efficient fine-tuning
+- Built a Gradio interface for interactive medical question answering
+- Compared base model vs fine-tuned model responses
+
 ## Features
 - Fine-tuned LLM using QLoRA
 - Medical question answering
