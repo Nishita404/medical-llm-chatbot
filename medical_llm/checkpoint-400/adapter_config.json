@@ -29,8 +29,8 @@
   "rank_pattern": {},
   "revision": null,
   "target_modules": [
-    "o_proj",
-    "qkv_proj"
+    "qkv_proj",
+    "o_proj"
   ],
   "target_parameters": null,
   "task_type": "CAUSAL_LM",

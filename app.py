@@ -129,4 +129,4 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
     gr.Markdown("---")
     gr.Markdown("*This is a demo project. Not intended for real medical advice.*")
 
-app.launch(share=False)
+app.launch(share=True)
