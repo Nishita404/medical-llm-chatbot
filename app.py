@@ -37,7 +37,6 @@ print("All models loaded!")
 # -----------------------
 
 def generate_response(model, history, question):
-    # Build prompt with full conversation history
     prompt = ""
     for user_msg, bot_msg in history:
         prompt += f"### Instruction:\n{user_msg}\n\n### Response:\n{bot_msg}\n\n"
@@ -73,26 +72,22 @@ def clear_chat():
 
 
 # -----------------------
-# Gradio UI
+# Gradio UI — fixed for Gradio 6.0+
 # -----------------------
 
 css = """
 #sidebar { background: #1a1a2e; padding: 16px; border-radius: 12px; }
-#chatbot .message.user { background: #2d6a4f !important; border-radius: 12px; }
-#chatbot .message.bot { background: #1e1e2e !important; border-radius: 12px; }
 footer { display: none !important; }
-#title { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
-#subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 16px; }
 """
 
-with gr.Blocks(theme=gr.themes.Soft(primary_hue="green"), css=css, title="Medical LLM Chatbot") as app:
+with gr.Blocks(title="Medical LLM Chatbot") as app:
 
     with gr.Row():
 
         # ----- Sidebar -----
         with gr.Column(scale=1, elem_id="sidebar"):
             gr.Markdown("## 🩺 MedChat")
-            gr.Markdown("*Fine-tuned on MedQuAD*", elem_id="subtitle")
+            gr.Markdown("*Fine-tuned on MedQuAD*")
 
             model_choice = gr.Radio(
                 choices=["Fine-tuned model", "Base model"],
@@ -121,11 +116,8 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="green"), css=css, title="Medica
             gr.Markdown("Ask any medical question. The AI remembers your conversation.")
 
             chatbot = gr.Chatbot(
-                elem_id="chatbot",
                 height=500,
-                bubble_full_width=False,
                 show_label=False,
-                avatar_images=(None, "https://api.dicebear.com/7.x/bottts/svg?seed=medbot")
             )
 
             with gr.Row():
@@ -177,4 +169,7 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="green"), css=css, title="Medica
         outputs=[history_state, chatbot]
     )
 
-app.launch(share=False)
+app.launch(
+    share=False,
+    theme=gr.themes.Soft(primary_hue="green"),
+)
