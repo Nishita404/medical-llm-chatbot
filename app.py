@@ -61,22 +61,26 @@ def chat(question, history, model_choice):
     if not question.strip():
         return "", history
 
-    # Convert messages format to tuples for prompt building
+    # Convert flat list to tuples for prompt building
     history_tuples = []
     for i in range(0, len(history) - 1, 2):
         if i + 1 < len(history):
-            history_tuples.append((history[i]["content"], history[i+1]["content"]))
+            history_tuples.append((history[i], history[i+1]))
 
     model = ft_model if model_choice == "Fine-tuned model" else base_model
     response = generate_response(model, history_tuples, question)
 
-    history.append({"role": "user", "content": question})
-    history.append({"role": "assistant", "content": response})
+    history.append(question)
+    history.append(response)
     return "", history
 
 
 def clear_chat():
     return [], []
+
+
+def history_to_pairs(history):
+    return [(history[i], history[i+1]) for i in range(0, len(history) - 1, 2)]
 
 
 # -----------------------
@@ -126,7 +130,6 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
             chatbot = gr.Chatbot(
                 height=500,
                 show_label=False,
-                type="messages",
             )
 
             with gr.Row():
@@ -147,7 +150,7 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
         inputs=[msg_box, history_state, model_choice],
         outputs=[msg_box, history_state]
     ).then(
-        fn=lambda h: h,
+        fn=history_to_pairs,
         inputs=history_state,
         outputs=chatbot
     )
@@ -157,7 +160,7 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
         inputs=[msg_box, history_state, model_choice],
         outputs=[msg_box, history_state]
     ).then(
-        fn=lambda h: h,
+        fn=history_to_pairs,
         inputs=history_state,
         outputs=chatbot
     )
