@@ -36,9 +36,9 @@ print("All models loaded!")
 # Answer function with memory
 # -----------------------
 
-def generate_response(model, history, question):
+def generate_response(model, history_tuples, question):
     prompt = ""
-    for user_msg, bot_msg in history:
+    for user_msg, bot_msg in history_tuples:
         prompt += f"### Instruction:\n{user_msg}\n\n### Response:\n{bot_msg}\n\n"
     prompt += f"### Instruction:\n{question}\n\n### Response:\n"
 
@@ -61,9 +61,17 @@ def chat(question, history, model_choice):
     if not question.strip():
         return "", history
 
+    # Convert messages format to tuples for prompt building
+    history_tuples = []
+    for i in range(0, len(history) - 1, 2):
+        if i + 1 < len(history):
+            history_tuples.append((history[i]["content"], history[i+1]["content"]))
+
     model = ft_model if model_choice == "Fine-tuned model" else base_model
-    response = generate_response(model, history, question)
-    history.append((question, response))
+    response = generate_response(model, history_tuples, question)
+
+    history.append({"role": "user", "content": question})
+    history.append({"role": "assistant", "content": response})
     return "", history
 
 
@@ -72,7 +80,7 @@ def clear_chat():
 
 
 # -----------------------
-# Gradio UI — fixed for Gradio 6.0+
+# Gradio UI
 # -----------------------
 
 css = """
@@ -118,6 +126,7 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
             chatbot = gr.Chatbot(
                 height=500,
                 show_label=False,
+                type="messages",
             )
 
             with gr.Row():
