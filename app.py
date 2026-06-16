@@ -36,10 +36,13 @@ print("All models loaded!")
 # Answer function with memory
 # -----------------------
 
-def generate_response(model, history_tuples, question):
+def generate_response(model, history, question):
     prompt = ""
-    for user_msg, bot_msg in history_tuples:
-        prompt += f"### Instruction:\n{user_msg}\n\n### Response:\n{bot_msg}\n\n"
+    for msg in history:
+        if msg["role"] == "user":
+            prompt += f"### Instruction:\n{msg['content']}\n\n"
+        else:
+            prompt += f"### Response:\n{msg['content']}\n\n"
     prompt += f"### Instruction:\n{question}\n\n### Response:\n"
 
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
@@ -61,26 +64,16 @@ def chat(question, history, model_choice):
     if not question.strip():
         return "", history
 
-    # Convert flat list to tuples for prompt building
-    history_tuples = []
-    for i in range(0, len(history) - 1, 2):
-        if i + 1 < len(history):
-            history_tuples.append((history[i], history[i+1]))
-
     model = ft_model if model_choice == "Fine-tuned model" else base_model
-    response = generate_response(model, history_tuples, question)
+    response = generate_response(model, history, question)
 
-    history.append(question)
-    history.append(response)
+    history.append({"role": "user", "content": question})
+    history.append({"role": "assistant", "content": response})
     return "", history
 
 
 def clear_chat():
     return [], []
-
-
-def history_to_pairs(history):
-    return [(history[i], history[i+1]) for i in range(0, len(history) - 1, 2)]
 
 
 # -----------------------
@@ -150,7 +143,7 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
         inputs=[msg_box, history_state, model_choice],
         outputs=[msg_box, history_state]
     ).then(
-        fn=history_to_pairs,
+        fn=lambda h: h,
         inputs=history_state,
         outputs=chatbot
     )
@@ -160,7 +153,7 @@ with gr.Blocks(title="Medical LLM Chatbot") as app:
         inputs=[msg_box, history_state, model_choice],
         outputs=[msg_box, history_state]
     ).then(
-        fn=history_to_pairs,
+        fn=lambda h: h,
         inputs=history_state,
         outputs=chatbot
     )
