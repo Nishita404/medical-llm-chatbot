@@ -26,107 +26,155 @@ base_model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16
 )
 
-print("Loading your fine-tuned adapter...")
+print("Loading fine-tuned adapter...")
 ft_model = PeftModel.from_pretrained(base_model, "medical_llm_adapter")
 ft_model.eval()
 
-print("All models loaded! Starting app...")
+print("All models loaded!")
 
 # -----------------------
-# Answer function
+# Answer function with memory
 # -----------------------
 
-def answer(question):
-    if not question.strip():
-        return "Please enter a medical question.", ""
+def generate_response(model, history, question):
+    # Build prompt with full conversation history
+    prompt = ""
+    for user_msg, bot_msg in history:
+        prompt += f"### Instruction:\n{user_msg}\n\n### Response:\n{bot_msg}\n\n"
+    prompt += f"### Instruction:\n{question}\n\n### Response:\n"
 
-    prompt = f"### Instruction:\n{question}\n\n### Response:\n"
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 
     with torch.no_grad():
-        # Base model answer
-        base_out = base_model.generate(
+        outputs = model.generate(
             **inputs,
             max_new_tokens=200,
             temperature=0.7,
             do_sample=True,
             pad_token_id=tokenizer.eos_token_id
         )
-        base_answer = tokenizer.decode(base_out[0], skip_special_tokens=True)
-        base_answer = base_answer.split("### Response:")[-1].strip()
 
-        # Fine-tuned model answer
-        ft_out = ft_model.generate(
-            **inputs,
-            max_new_tokens=200,
-            temperature=0.7,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-        ft_answer = tokenizer.decode(ft_out[0], skip_special_tokens=True)
-        ft_answer = ft_answer.split("### Response:")[-1].strip()
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return response.split("### Response:")[-1].strip()
 
-    return base_answer, ft_answer
+
+def chat(question, history, model_choice):
+    if not question.strip():
+        return "", history
+
+    model = ft_model if model_choice == "Fine-tuned model" else base_model
+    response = generate_response(model, history, question)
+    history.append((question, response))
+    return "", history
+
+
+def clear_chat():
+    return [], []
+
 
 # -----------------------
 # Gradio UI
 # -----------------------
 
-with gr.Blocks(title="Medical LLM Chatbot") as app:
+css = """
+#sidebar { background: #1a1a2e; padding: 16px; border-radius: 12px; }
+#chatbot .message.user { background: #2d6a4f !important; border-radius: 12px; }
+#chatbot .message.bot { background: #1e1e2e !important; border-radius: 12px; }
+footer { display: none !important; }
+#title { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
+#subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 16px; }
+"""
 
-    gr.Markdown("# Medical LLM Chatbot")
-    gr.Markdown("### Base model vs Fine-tuned model — side by side comparison")
-    gr.Markdown("*Fine-tuned on MedQuAD dataset using QLoRA on RTX 4060*")
-
-    with gr.Row():
-        question_box = gr.Textbox(
-            label="Ask a medical question",
-            placeholder="e.g. What are the symptoms of diabetes?",
-            lines=2,
-            scale=4
-        )
-        ask_btn = gr.Button("Ask", variant="primary", scale=1)
-
-    gr.Markdown("### Suggested questions")
-    with gr.Row():
-        gr.Button("What are symptoms of diabetes?").click(
-            fn=lambda: "What are symptoms of diabetes?",
-            outputs=question_box
-        )
-        gr.Button("How is hypertension treated?").click(
-            fn=lambda: "How is hypertension treated?",
-            outputs=question_box
-        )
-        gr.Button("What causes anemia?").click(
-            fn=lambda: "What causes anemia?",
-            outputs=question_box
-        )
+with gr.Blocks(theme=gr.themes.Soft(primary_hue="green"), css=css, title="Medical LLM Chatbot") as app:
 
     with gr.Row():
-        base_output = gr.Textbox(
-            label="Base model (Phi-3 original)",
-            lines=10,
-            interactive=False
-        )
-        ft_output = gr.Textbox(
-            label="Your fine-tuned model (trained on MedQuAD)",
-            lines=10,
-            interactive=False
-        )
 
-    ask_btn.click(
-        fn=answer,
-        inputs=question_box,
-        outputs=[base_output, ft_output]
+        # ----- Sidebar -----
+        with gr.Column(scale=1, elem_id="sidebar"):
+            gr.Markdown("## 🩺 MedChat")
+            gr.Markdown("*Fine-tuned on MedQuAD*", elem_id="subtitle")
+
+            model_choice = gr.Radio(
+                choices=["Fine-tuned model", "Base model"],
+                value="Fine-tuned model",
+                label="Active model"
+            )
+
+            gr.Markdown("---")
+            gr.Markdown("**Suggested questions**")
+
+            q1 = gr.Button("💊 Symptoms of diabetes?", size="sm")
+            q2 = gr.Button("❤️ How is hypertension treated?", size="sm")
+            q3 = gr.Button("🩸 What causes anemia?", size="sm")
+            q4 = gr.Button("🫁 How is pneumonia diagnosed?", size="sm")
+            q5 = gr.Button("💊 Side effects of ibuprofen?", size="sm")
+
+            gr.Markdown("---")
+            clear_btn = gr.Button("🗑️ Clear chat", variant="secondary")
+
+            gr.Markdown("---")
+            gr.Markdown("*Not intended for real medical advice.*")
+
+        # ----- Main chat area -----
+        with gr.Column(scale=4):
+            gr.Markdown("# 🩺 Medical LLM Chatbot")
+            gr.Markdown("Ask any medical question. The AI remembers your conversation.")
+
+            chatbot = gr.Chatbot(
+                elem_id="chatbot",
+                height=500,
+                bubble_full_width=False,
+                show_label=False,
+                avatar_images=(None, "https://api.dicebear.com/7.x/bottts/svg?seed=medbot")
+            )
+
+            with gr.Row():
+                msg_box = gr.Textbox(
+                    placeholder="Ask a medical question...",
+                    show_label=False,
+                    scale=5,
+                    container=False
+                )
+                send_btn = gr.Button("Send", variant="primary", scale=1)
+
+    # ----- State -----
+    history_state = gr.State([])
+
+    # ----- Button actions -----
+    send_btn.click(
+        fn=chat,
+        inputs=[msg_box, history_state, model_choice],
+        outputs=[msg_box, history_state]
+    ).then(
+        fn=lambda h: h,
+        inputs=history_state,
+        outputs=chatbot
     )
 
-    question_box.submit(
-        fn=answer,
-        inputs=question_box,
-        outputs=[base_output, ft_output]
+    msg_box.submit(
+        fn=chat,
+        inputs=[msg_box, history_state, model_choice],
+        outputs=[msg_box, history_state]
+    ).then(
+        fn=lambda h: h,
+        inputs=history_state,
+        outputs=chatbot
     )
 
-    gr.Markdown("---")
-    gr.Markdown("*This is a demo project. Not intended for real medical advice.*")
+    # Suggested question buttons
+    for btn, question in [
+        (q1, "What are the symptoms of diabetes?"),
+        (q2, "How is hypertension treated?"),
+        (q3, "What causes anemia?"),
+        (q4, "How is pneumonia diagnosed?"),
+        (q5, "What are the side effects of ibuprofen?")
+    ]:
+        btn.click(fn=lambda q=question: q, outputs=msg_box)
 
-app.launch(share=True)
+    # Clear chat
+    clear_btn.click(
+        fn=clear_chat,
+        outputs=[history_state, chatbot]
+    )
+
+app.launch(share=False)
