@@ -1,0 +1,16 @@
+{
+  "66e3f563-0554-4e8f-a235-c2c8dfe5ff96": {
+    "title": "What are the symptoms of diabetes?",
+    "created_at": "2026-06-18T10:11:36.036220",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What are the symptoms of diabetes?"
+      },
+      {
+        "role": "assistant",
+        "content": "The signs and symptoms of diabetes can be divided into the acute and chronic phases.  Acute phase of diabetes  The acute phase of diabetes is characterized by hyperglycemia (high blood glucose), which can cause several signs and symptoms. People with untreated diabetes may feel tired and thirsty, urinate more often, and lose weight. They may have blurred vision and skin that appears dull and unhealthy.  Chronic phase of diabetes The chronic phase of diabetes is characterized by damage to the blood vessels and nerves, which can also cause signs and symptoms. Diabetes can cause heart disease, stroke, and damage to the nerves and kidneys, resulting in loss of feeling and control of certain body functions.   The most common sign of diabetes is diabetic retinopathy, which can cause"
+      }
+    ]
+  }
+}
